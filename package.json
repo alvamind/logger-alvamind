@@ -1,11 +1,19 @@
 {
   "name": "logger-alvamind",
   "version": "1.0.0",
-  "description": "A colorful and informative logger with resource usage for Node.js",
-  "type": "module",
+  "author": "Alvamind",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alvamind/logger-alvamind.git"
+  },
   "main": "dist/index.js",
   "module": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^20.17.11",
+    "bun-types": "^1.1.42",
+    "rimraf": "^5.0.10",
+    "typescript": "^5.7.2"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -13,16 +21,13 @@
       "types": "./dist/index.d.ts"
     }
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/alvamind/logger-alvamind.git"
-  },
-  "scripts": {
-    "dev": "bun run src/index.ts --watch",
-    "build": "tsc && tsc -p tsconfig.build.json",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean"
-  },
+  "description": "A colorful and informative logger with resource usage for Node.js",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "index.d.ts"
+  ],
   "keywords": [
     "logger",
     "nodejs",
@@ -31,21 +36,13 @@
     "cpu",
     "ram"
   ],
-  "author": "Alvamind",
   "license": "MIT",
-  "files": [
-    "dist",
-    "src",
-    "README.md",
-    "index.d.ts"
-  ],
-  "dependencies": {
-    "pidusage": "^3.0.2"
+  "scripts": {
+    "dev": "bun run src/index.ts --watch",
+    "build": "tsc && tsc -p tsconfig.build.json",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean"
   },
-  "devDependencies": {
-    "@types/node": "^20.17.11",
-    "bun-types": "^1.1.42",
-    "rimraf": "^5.0.10",
-    "typescript": "^5.7.2"
-  }
+  "type": "module",
+  "types": "dist/index.d.ts"
 }

@@ -1,13 +1,13 @@
-import pidusage from 'pidusage';
+import { getResourceUsage, type ResourceStats } from './resource-monitor';
 
 const colors = {
-  info: ['\x1b[38;5;122m', '\x1b[38;5;81m'], // hijau muda
-  warn: ['\x1b[38;5;214m', '\x1b[38;5;208m'], // orange
-  error: ['\x1b[38;5;197m', '\x1b[38;5;160m'], // merah
-  debug: ['\x1b[38;5;75m', '\x1b[38;5;68m'], // biru muda
-  verbose: ['\x1b[38;5;228m', '\x1b[38;5;223m'], // abu-abu terang
-  resource: ['\x1b[38;5;46m', '\x1b[38;5;118m'], // warna baru buat resource, gw kasih hijau tua
-  reset: '\x1b[0m', // reset color
+  info: ['\x1b[38;5;122m', '\x1b[38;5;81m'],
+  warn: ['\x1b[38;5;214m', '\x1b[38;5;208m'],
+  error: ['\x1b[38;5;197m', '\x1b[38;5;160m'],
+  debug: ['\x1b[38;5;75m', '\x1b[38;5;68m'],
+  verbose: ['\x1b[38;5;228m', '\x1b[38;5;223m'],
+  resource: ['\x1b[38;5;46m', '\x1b[38;5;118m'],
+  reset: '\x1b[0m',
 };
 
 function getCallerFile(): string {
@@ -29,7 +29,6 @@ const log = (level: keyof typeof colors, message: string, ...args: any[]) => {
   const fileName = getCallerFile();
   const timestamp = new Date().toISOString();
   const color = colors[level] || colors.reset;
-  // Move the clearLine logic here, before logging the message
   clearLine();
   const logMessage = `${color[0]}[${timestamp}] ${color[1]}[${level.toUpperCase()}] ${message} ${color[0]}[${fileName}]${colors.reset} `;
   console.log(logMessage, ...args);
@@ -46,16 +45,15 @@ export const logger = {
 };
 
 function clearLine() {
-  process.stdout.write('\r\x1b[K'); // Clear line
+  process.stdout.write('\r\x1b[K');
 }
 
-let lastResourceString = ''; // Store last resource string to prevent flickering
+let lastResourceString = '';
 let messageRateString = '';
 
 async function displayResourceUsage() {
   try {
-    const pid = process.pid;
-    const stats = await pidusage(pid);
+    const stats = await getResourceUsage();
 
     const cpuUsage = stats.cpu.toFixed(2);
     const memoryUsage = (stats.memory / (1024 * 1024)).toFixed(2); // Memory in MB
@@ -72,10 +70,9 @@ async function displayResourceUsage() {
   }
 }
 
-export function setMesageRateString(messageRate: string) {
+export function setMessageRateString(messageRate: string) {
   messageRateString = messageRate;
 }
 
-
-// Update tiap detik (atau sesuai kebutuhan)
+// Update every second
 setInterval(displayResourceUsage, 1000);
