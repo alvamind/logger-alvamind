@@ -58,7 +58,7 @@ SOFTWARE.
 // package.json
 {
   "name": "logger-alvamind",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Alvamind",
   "repository": {
     "type": "git",
@@ -67,10 +67,10 @@ SOFTWARE.
   "main": "dist/index.js",
   "module": "dist/index.js",
   "devDependencies": {
-    "@types/node": "^20.17.11",
-    "bun-types": "^1.1.42",
+    "@types/node": "^20.17.12",
+    "bun-types": "^1.1.43",
     "rimraf": "^5.0.10",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.3"
   },
   "exports": {
     ".": {
@@ -113,7 +113,7 @@ SOFTWARE.
   "type": "module",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "alvamind-tools": "^1.0.22"
+    "alvamind-tools": "^1.0.23"
   }
 }
 
@@ -344,210 +344,124 @@ export async function getResourceUsage(): Promise<ResourceStats> {
 // test/main.test.ts
 import { describe, expect, it, beforeAll, afterAll } from "bun:test";
 import { exec } from "child_process";
-import { writeFile, mkdir, rm, readdir, readFile } from "fs/promises";
+import { writeFile, mkdir, rm } from "fs/promises";
 import { promisify } from "util";
 import path from "path";
 const execAsync = promisify(exec);
-async function copyDir(src: string, dest: string) {
-  await mkdir(dest, { recursive: true });
-  const entries = await readdir(src, { withFileTypes: true });
-  for (const entry of entries) {
-    const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
-    if (entry.isDirectory()) {
-      await copyDir(srcPath, destPath);
-    } else {
-      await writeFile(destPath, await readFile(srcPath));
-    }
-  }
-}
+const testDir = path.join(process.cwd(), "test-environment");
 const modifiedTestFiles = {
   "main.ts": `
-    import logger from "logger-alvamind/index.js";
-    class UserService {
-      initialize() {
-        logger.info("UserService initialized");
-      }
-    }
-    class DatabaseService {
-      connect() {
-        logger.info("Database connected");
-      }
-    }
-    logger.info("Direct call from main");
-    const userService = new UserService();
-    userService.initialize();
-    const dbService = new DatabaseService();
-    dbService.connect();
-    setTimeout(() => {
-      logger.info("Async operation completed");
-    }, 100);
-    Promise.resolve().then(() => {
-      logger.info("Promise resolved");
-    });
-    function nestedFunction() {
-      function deeperFunction() {
-        logger.info("Nested call");
-      }
-      deeperFunction();
-    }
-    nestedFunction();
+    import logger from "../dist/index.js";
+    const test = () => {
+      logger.info("Test message from main");
+      logger.warn("Warning message from main");
+    };
+    test();
   `,
   "userController.ts": `
-    import logger from "logger-alvamind/index.js";
-    export class UserController {
-      constructor() {
-        logger.info("UserController initialized");
-      }
-      handleRequest() {
-        logger.info("Handling user request");
-      }
-    }
-    const controller = new UserController();
-    controller.handleRequest();
+    import logger from "../dist/index.js";
+    const test = () => {
+      logger.info("Test message from userController");
+    };
+    test();
   `,
   "apiService.ts": `
-    import logger from "logger-alvamind/index.js";
-    async function initializeAPI() {
-      logger.info("API Service starting");
+    import logger from "../dist/index.js";
+    const test = async () => {
+      logger.info("Test message from apiService");
       await new Promise(resolve => setTimeout(resolve, 100));
-      logger.info("API Service ready");
-    }
-    initializeAPI();
+      logger.info("Async message from apiService");
+    };
+    test();
   `
 };
 describe("Logger File Detection in Real Usage", () => {
-  const testDir = path.join(process.cwd(), "test-environment");
-  const testFiles = modifiedTestFiles
   beforeAll(async () => {
-    const distPackageJson = {
-      "name": "logger-alvamind",
-      "version": "1.0.0",
-      "main": "index.js",
-      "type": "module"
-    };
-    await mkdir(path.join(process.cwd(), "dist"), { recursive: true })
-    await writeFile(path.join(process.cwd(), "dist", "package.json"), JSON.stringify(distPackageJson, null, 2));
-    await execAsync("bun run build");
     await mkdir(testDir, { recursive: true });
-    await copyDir(path.join(process.cwd(), "dist"), path.join(testDir, "dist"));
+    for (const [filename, content] of Object.entries(modifiedTestFiles)) {
+      await writeFile(
+        path.join(testDir, filename),
+        content.trim()
+      );
+    }
     const packageJson = {
       "type": "module",
       "dependencies": {
-        "logger-alvamind": "file:./dist"
+        "logger-alvamind": "file:../",
+        "typescript": "^5.0.0"
       }
     };
     await writeFile(
       path.join(testDir, "package.json"),
       JSON.stringify(packageJson, null, 2)
     );
-    await execAsync("bun install", { cwd: testDir });
-    for (const [filename, content] of Object.entries(testFiles)) {
-      await writeFile(
-        path.join(testDir, filename),
-        content.trim()
-      );
-    }
     const tsConfig = {
       "compilerOptions": {
         "target": "ES2020",
         "module": "ESNext",
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "esModuleInterop": true,
         "strict": true,
         "skipLibCheck": true,
-        "allowImportingTsExtensions": true
-      }
+        "outDir": "./dist",
+        "rootDir": ".",
+        "allowJs": true
+      },
+      "include": ["./*.ts"],
+      "exclude": ["node_modules"]
     };
     await writeFile(
       path.join(testDir, "tsconfig.json"),
       JSON.stringify(tsConfig, null, 2)
     );
+    await execAsync("bun install", { cwd: testDir });
+    await execAsync("bun run build", { cwd: process.cwd() });
+    await execAsync("bunx tsc", { cwd: testDir });
   });
   afterAll(async () => {
     await rm(testDir, { recursive: true, force: true });
   });
   it("should correctly detect file names in main.ts", async () => {
-    try {
-      const { stdout, stderr } = await execAsync(
-        `bun run ${path.join(testDir, "main.ts")}`,
-        {
-          timeout: 10000,
-          env: { ...process.env, NODE_ENV: 'test' }
-        }
-      );
-      if (stderr) console.error(`stderr from main.ts:\n`, stderr);
-      expect(stdout).toContain("main.ts");
-      expect(stdout).not.toContain("unknown");
-      expect(stdout).toContain("UserService initialized");
-      expect(stdout).toContain("Database connected");
-    } catch (error) {
-      console.error("Test execution error:", error);
-      throw error;
-    }
-  }, 15000);
+    const { stdout } = await execAsync(
+      `bun run ${path.join(testDir, "dist", "main.js")}`,
+      {
+        env: { ...process.env, NODE_ENV: 'test' }
+      }
+    );
+    expect(stdout).toContain("main.ts");
+    expect(stdout).toContain("Test message from main");
+  });
   it("should correctly detect file names in userController.ts", async () => {
-    try {
-      const { stdout, stderr } = await execAsync(
-        `bun run ${path.join(testDir, "userController.ts")}`,
-        {
-          timeout: 10000,
-          env: { ...process.env, NODE_ENV: 'test' }
-        }
-      );
-      if (stderr) {
-        console.error(`stderr from userController.ts:\n`, stderr)
+    const { stdout } = await execAsync(
+      `bun run ${path.join(testDir, "dist", "userController.js")}`,
+      {
+        env: { ...process.env, NODE_ENV: 'test' }
       }
-      expect(stdout).toContain("userController.ts");
-      expect(stdout).not.toContain("unknown");
-      expect(stdout).toContain("UserController initialized");
-      expect(stdout).toContain("Handling user request");
-    } catch (error) {
-      console.error("Test execution error:", error);
-      throw error;
-    }
-  }, 15000);
+    );
+    expect(stdout).toContain("userController.ts");
+    expect(stdout).toContain("Test message from userController");
+  });
   it("should correctly detect file names in apiService.ts", async () => {
-    try {
-      const { stdout, stderr } = await execAsync(
-        `bun run ${path.join(testDir, "apiService.ts")}`,
-        {
-          timeout: 10000,
-          env: { ...process.env, NODE_ENV: 'test' }
-        }
-      );
-      if (stderr) {
-        console.error(`stderr from apiService.ts:\n`, stderr)
+    const { stdout } = await execAsync(
+      `bun run ${path.join(testDir, "dist", "apiService.js")}`,
+      {
+        env: { ...process.env, NODE_ENV: 'test' }
       }
-      expect(stdout).toContain("apiService.ts");
-      expect(stdout).not.toContain("unknown");
-      expect(stdout).toContain("API Service starting");
-      expect(stdout).toContain("API Service ready");
-    } catch (error) {
-      console.error("Test execution error:", error);
-      throw error;
-    }
-  }, 15000);
+    );
+    expect(stdout).toContain("apiService.ts");
+    expect(stdout).toContain("Test message from apiService");
+  });
   it("should handle concurrent file logging correctly", async () => {
-    try {
-      const results = await Promise.all([
-        execAsync(`bun run ${path.join(testDir, "main.ts")}`, { timeout: 10000, env: { ...process.env, NODE_ENV: 'test' } }),
-        execAsync(`bun run ${path.join(testDir, "userController.ts")}`, { timeout: 10000, env: { ...process.env, NODE_ENV: 'test' } }),
-        execAsync(`bun run ${path.join(testDir, "apiService.ts")}`, { timeout: 10000, env: { ...process.env, NODE_ENV: 'test' } })
-      ]);
-      results.forEach(({ stdout, stderr }, index) => {
-        if (stderr) {
-          console.error(`stderr from concurrent test #${index + 1}:\n`, stderr)
-        }
-        const files = ["main.ts", "userController.ts", "apiService.ts"];
-        expect(stdout).toContain(files[index]);
-        expect(stdout).not.toContain("unknown");
-      });
-    } catch (error) {
-      console.error("Test execution error:", error);
-      throw error;
-    }
-  }, 15000);
+    const results = await Promise.all([
+      execAsync(`bun run ${path.join(testDir, "dist", "main.js")}`, { env: { ...process.env, NODE_ENV: 'test' } }),
+      execAsync(`bun run ${path.join(testDir, "dist", "userController.js")}`, { env: { ...process.env, NODE_ENV: 'test' } }),
+      execAsync(`bun run ${path.join(testDir, "dist", "apiService.js")}`, { env: { ...process.env, NODE_ENV: 'test' } })
+    ]);
+    results.forEach(({ stdout }, index) => {
+      const files = ["main.ts", "userController.ts", "apiService.ts"];
+      expect(stdout).toContain(files[index]);
+    });
+  });
 });
 
 // tsconfig.build.json

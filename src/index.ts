@@ -8,7 +8,7 @@ const colors = {
   resource: ['\x1b[38;5;46m', '\x1b[38;5;118m'],
   reset: '\x1b[0m',
 };
-const logger = {
+export const logger = {
   getCallerFile: () => {
     try {
       throw new Error();
@@ -46,7 +46,7 @@ const logger = {
 
 let lastResourceString = '';
 let messageRateString = '';
-async function displayResourceUsage() {
+export async function displayResourceUsage() {
   try {
     const stats = await getResourceUsage();
     const cpuUsage = stats.cpu.toFixed(2);
@@ -65,4 +65,4 @@ export function setMessageRateString(messageRate: string) {
   messageRateString = messageRate;
 }
 setInterval(displayResourceUsage, 1000);
-export default logger;
+export { logger as default };

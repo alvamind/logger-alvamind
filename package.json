@@ -1,6 +1,6 @@
 {
   "name": "logger-alvamind",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": "Alvamind",
   "repository": {
     "type": "git",
@@ -9,10 +9,10 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "devDependencies": {
-    "@types/node": "^20.17.11",
-    "bun-types": "^1.1.42",
+    "@types/node": "^20.17.12",
+    "bun-types": "^1.1.43",
     "rimraf": "^5.0.10",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.3"
   },
   "exports": {
     ".": {
@@ -55,6 +55,6 @@
   "type": "module",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "alvamind-tools": "^1.0.22"
+    "alvamind-tools": "^1.0.23"
   }
 }
