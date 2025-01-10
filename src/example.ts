@@ -1,6 +1,4 @@
-import { logger } from './index';
-
-// Test different log levels
+import logger from './index';
 setInterval(() => {
   logger.info('This is an info message');
   logger.warn('This is a warning message');

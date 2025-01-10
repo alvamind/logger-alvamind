@@ -38,11 +38,23 @@
   ],
   "license": "MIT",
   "scripts": {
-    "dev": "bun run src/index.ts --watch",
-    "build": "tsc && tsc -p tsconfig.build.json",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean"
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "dev": "bun tsc --watch",
+    "compose": "docker compose up -d",
+    "commit": "commit",
+    "reinstall": "bun clean && bun install",
+    "build": "tsc -p tsconfig.build.json",
+    "source": "generate-source --exclude=**/dist/**,.gitignore,bun.lockb --output=source.md",
+    "clean": "clean",
+    "build:tgz": "bun run build && bun pm pack",
+    "test": "bun test test/*.test.ts",
+    "split-code": "split-code source=combined.ts markers=src/,lib/ outputDir=./output",
+    "publish-npm": "publish-npm patch"
   },
   "type": "module",
-  "types": "dist/index.d.ts"
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "alvamind-tools": "^1.0.22"
+  }
 }
