@@ -1,4 +1,5 @@
 import { getResourceUsage } from './resource-monitor';
+
 const colors = {
   info: ['\x1b[38;5;122m', '\x1b[38;5;81m'],
   warn: ['\x1b[38;5;214m', '\x1b[38;5;208m'],
@@ -8,6 +9,7 @@ const colors = {
   resource: ['\x1b[38;5;46m', '\x1b[38;5;118m'],
   reset: '\x1b[0m',
 };
+
 export const logger = {
   getCallerFile: () => {
     try {
@@ -16,10 +18,14 @@ export const logger = {
       const stack = (e as Error).stack?.split('\n') || [];
       const callerLine = stack[3];
       if (!callerLine) return 'unknown';
-      const match = callerLine.match(/at\s+(.+?)\s+\((.+?):\d+:\d+\)|at\s+(.+?):\d+:\d+/);
-      if (!match) return 'unknown';
-      const filePath = match[2] || match[3] || match[1];
+
+      // Simplified regex to extract the file path and name.
+      const match = callerLine.match(/at (?:.*?)\s*(?:\((.*?)\)|(.*?)):/);
+
+      const filePath = match ? match[1] || match[2] : null;
+
       if (!filePath) return 'unknown';
+
       const parts = filePath.split(/[/\\]/);
       return parts[parts.length - 1];
     }
@@ -46,6 +52,7 @@ export const logger = {
 
 let lastResourceString = '';
 let messageRateString = '';
+
 export async function displayResourceUsage() {
   try {
     const stats = await getResourceUsage();
@@ -61,8 +68,11 @@ export async function displayResourceUsage() {
     console.error('Error getting resource usage:', error);
   }
 }
+
 export function setMessageRateString(messageRate: string) {
   messageRateString = messageRate;
 }
+
 setInterval(displayResourceUsage, 1000);
+
 export { logger as default };
